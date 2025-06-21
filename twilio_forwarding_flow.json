@@ -1,0 +1,174 @@
+{
+  "description": "Simple voicemail with text notifications",
+  "states": [
+    {
+      "name": "Trigger",
+      "type": "trigger",
+      "transitions": [
+        {
+          "next": "SendSMSNotification",
+          "event": "incomingMessage"
+        },
+        {
+          "next": "LeaveYourMessage",
+          "event": "incomingCall"
+        },
+        {
+          "event": "incomingRequest"
+        }
+      ],
+      "properties": {
+        "offset": {
+          "x": -10,
+          "y": 40
+        }
+      }
+    },
+    {
+      "name": "RecordVoicemail",
+      "type": "record-voicemail",
+      "transitions": [
+        {
+          "next": "CheckDuration",
+          "event": "recordingComplete"
+        },
+        {
+          "event": "noAudio"
+        },
+        {
+          "next": "CheckDuration",
+          "event": "hangup"
+        }
+      ],
+      "properties": {
+        "offset": {
+          "x": 270,
+          "y": 440
+        },
+        "timeout": 15,
+        "max_length": 3600
+      }
+    },
+    {
+      "name": "SendVoicemailNotification",
+      "type": "send-message",
+      "transitions": [
+        {
+          "event": "sent"
+        },
+        {
+          "event": "failed"
+        }
+      ],
+      "properties": {
+        "offset": {
+          "x": 270,
+          "y": 900
+        },
+        "service": "{{trigger.message.InstanceSid}}",
+        "channel": "{{trigger.message.ChannelSid}}",
+        "from": "+12345678901",
+        "to": "+12345678901",
+        "body": "Hola, there is a new voicemail from {{trigger.call.From}} \n{{widgets.RecordVoicemail.RecordingUrl}}"
+      }
+    },
+    {
+      "name": "SendSMSNotification",
+      "type": "send-message",
+      "transitions": [
+        {
+          "event": "sent"
+        },
+        {
+          "event": "failed"
+        }
+      ],
+      "properties": {
+        "offset": {
+          "x": -270,
+          "y": 210
+        },
+        "service": "{{trigger.message.InstanceSid}}",
+        "channel": "{{trigger.message.ChannelSid}}",
+        "from": "+12345678901",
+        "to": "+12345678901",
+        "body": "Hola, there is a a text message from {{trigger.message.From}}:\n\n{{trigger.message.Body}}",
+        "media_url": "{{trigger.message.MediaUrl0}}"
+      }
+    },
+    {
+      "name": "LeaveYourMessage",
+      "type": "say-play",
+      "transitions": [
+        {
+          "next": "IgnacioSanMartin",
+          "event": "audioComplete"
+        }
+      ],
+      "properties": {
+        "voice": "woman",
+        "offset": {
+          "x": 100,
+          "y": 200
+        },
+        "loop": 1,
+        "say": "After the tone, please leave your message for",
+        "language": "en-US"
+      }
+    },
+    {
+      "name": "IgnacioSanMartin",
+      "type": "say-play",
+      "transitions": [
+        {
+          "next": "RecordVoicemail",
+          "event": "audioComplete"
+        }
+      ],
+      "properties": {
+        "voice": "default",
+        "offset": {
+          "x": 410,
+          "y": 200
+        },
+        "loop": 1,
+        "say": "Ignacio San Martín",
+        "language": "es-ES"
+      }
+    },
+    {
+      "name": "CheckDuration",
+      "type": "split-based-on",
+      "transitions": [
+        {
+          "event": "noMatch"
+        },
+        {
+          "next": "SendVoicemailNotification",
+          "event": "match",
+          "conditions": [
+            {
+              "friendly_name": "If value greater_than 3",
+              "arguments": [
+                "{{widgets.RecordVoicemail.RecordingDuration}}"
+              ],
+              "type": "greater_than",
+              "value": "3"
+            }
+          ]
+        }
+      ],
+      "properties": {
+        "input": "{{widgets.RecordVoicemail.RecordingDuration}}",
+        "offset": {
+          "x": 240,
+          "y": 690
+        }
+      }
+    }
+  ],
+  "initial_state": "Trigger",
+  "flags": {
+    "allow_concurrent_calls": true
+  }
+}
